@@ -1,0 +1,52 @@
+require 'nokogiri'
+require 'httparty'
+require 'byebug'
+require 'ruby-progressbar'
+
+
+def scrapper 
+   
+    url = 'https://blockwork.cc/'
+    unparsed_page = HTTParty.get(url)
+    parsed_page = Nokogiri::HTML(unparsed_page)
+    job_listing = parsed_page.css("div.listingCard") # about 50 jobs
+    jobs = Array.new
+
+    page = 1
+   
+    per_page = job_listing.count #counter
+    total = parsed_page.css("div.job-count").text.split(" ")[1].gsub(",","").to_i # total number of jobs listings
+    last_page = (total.to_f / per_page.to_f).round 
+
+    #setting up a progressbar
+    progressbar = ProgressBar.create(:title => "progress", :total => last_page)
+
+
+
+    while page <= last_page
+        
+        pagination_url = "https://blockwork.cc/listings?page=#{page}"
+        pagination_unparsed_page = HTTParty.get(pagination_url)
+        pagination_parsed_page = Nokogiri::HTML(pagination_unparsed_page)
+        pagination_job_listing = pagination_parsed_page.css("div.listingCard")
+
+        #iterating over the job listings
+        pagination_job_listing.each do |job_l|
+             job={
+                title:job_l.css("span.job-title").text,
+                company:job_l.css("span.company").text,
+                location:job_l.css("span.location").text,
+               url:"https://blockwork.cc"+job_l.css('a')[0].attributes["href"].value
+             }
+            jobs << job
+            end
+        page+=1
+        progressbar.increment
+    end
+    #byebug     
+end
+
+
+scrapper
+
+
