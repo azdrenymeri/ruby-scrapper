@@ -2,8 +2,15 @@ require 'nokogiri'
 require 'httparty'
 require 'byebug'
 require 'ruby-progressbar'
+require 'pg'
 
 
+
+
+
+
+
+#scrape data from the website
 def scrapper 
    
     url = 'https://blockwork.cc/'
@@ -43,10 +50,34 @@ def scrapper
         page+=1
         progressbar.increment
     end
+    return jobs
     #byebug     
 end
 
+#insert data into database
+def insert_data jobs_arr,db_connect
+    db_connect.set_error_verbosity(PG::PQERRORS_VERBOSE)
+    jobs_arr.each do |job|
+        db_connect.exec("INSERT INTO public.jobs_table(job_title, company, location, url)VALUES (\'#{job[:title].gsub("'","''")}\',\'#{job[:company].gsub("'","''")}\',\'#{job[:location].gsub("'","''")}\',\'#{job[:url]}\');") do |result|
+            puts result
+        end
+    end
+end
 
-scrapper
+
+
+
+
+#getting jobs from the website
+arr_jobs = scrapper
+
+#settin up a connection into postgre database
+db_connect = PG.connect(dbname: "ruby_scrapper_db",password: "ruby",user: "ruby_client")
+
+#inserting data
+insert_data(arr_jobs,db_connect)
+
+
+
 
 
